@@ -1,0 +1,114 @@
+---
+title: "Figure 3 and Appendix A"
+---
+
+```{r}
+source("derivation.R")
+
+library(tidyverse)
+library(geomtextpath)
+library(scales)
+library(viridis)
+
+theme_set(theme_minimal(base_size = 20))
+
+theme_update(
+  legend.position = "bottom",
+  legend.title.position = "top",
+  legend.key.width = unit(dev.size()[1] / 10, "inches")
+)
+```
+
+```{r}
+df <- expand_grid(
+  ai_auc = seq(.5, 1, by = 1e-2),
+  ai_acc = seq(0, 1, by = 1e-2),
+  h_acc = c(.4, .6),
+  h_auc = c(.6, .8),
+) |>
+  rowwise() |>
+  mutate(
+    h_d = auc_to_d(h_auc),
+    ai_d = auc_to_d(ai_auc),
+    combine = combined_accuracy_d(
+      theta_m = ai_acc,
+      theta_h = h_acc,
+      d_m = ai_d,
+      d_h = h_d
+    ),
+  )
+
+df
+```
+  
+```{r}
+g <- df |>
+  round(3) |>
+  ggplot(aes(x = ai_acc, y = ai_auc, z = combine * 100, fill = combine * 100)) +
+  geom_raster(interpolate = TRUE) +
+  scale_fill_viridis(option = "C") # turbo
+
+g <- g + geom_labelcontour(binwidth = 10, size = 5) +
+  labs(x = "AI Accuracy", y = "AI Metacognitive Sensitivity (AUROC2)", fill = "Combined Accuracy (%)") +
+  scale_x_continuous(
+    labels = label_number(drop0trailing = TRUE)
+  )
+
+g <- g + facet_grid(h_auc ~ h_acc, labeller = labeller(
+  h_acc = as_labeller(\(x) paste("Human Accuracy:", x)),
+  h_auc = as_labeller(\(x) paste("Human AUROC2:", x))
+))
+
+g
+```
+
+```{r}
+ggsave("multi_contour.pdf", width = 8, height = 10)
+```
+
+```{r}
+df <- expand_grid(
+  ai_auc = seq(.5, 1, by = 1e-2),
+  ai_acc = seq(0, 1, by = 1e-2),
+  h_acc = c(.1, .9),
+  h_auc = c(.55, .95),
+) |>
+  rowwise() |>
+  mutate(
+    h_d = auc_to_d(h_auc),
+    ai_d = auc_to_d(ai_auc),
+    combine = combined_accuracy_d(
+      theta_m = ai_acc,
+      theta_h = h_acc,
+      d_m = ai_d,
+      d_h = h_d
+    ),
+  )
+
+df
+```
+  
+```{r}
+g <- df |>
+  round(3) |>
+  ggplot(aes(x = ai_acc, y = ai_auc, z = combine * 100, fill = combine * 100)) +
+  geom_raster(interpolate = TRUE) +
+  scale_fill_viridis(option = "C") # turbo
+
+g <- g + geom_labelcontour(binwidth = 10, size = 5) +
+  labs(x = "AI Accuracy", y = "AI Metacognitive Sensitivity (AUROC2)", fill = "Combined Accuracy (%)") +
+  scale_x_continuous(
+    labels = label_number(drop0trailing = TRUE)
+  )
+
+g <- g + facet_grid(h_auc ~ h_acc, labeller = labeller(
+  h_acc = as_labeller(\(x) paste("Human Accuracy:", x)),
+  h_auc = as_labeller(\(x) paste("Human AUROC2:", x))
+))
+
+g
+```
+
+```{r}
+ggsave("multi_limit.pdf", width = 8, height = 10)
+```

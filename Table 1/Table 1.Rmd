@@ -1,0 +1,38 @@
+---
+title: "Table 1"
+output: 
+  pdf_document:
+    keep_tex: true
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+library(tibble)
+library(kableExtra)
+```
+
+# Run all the .R code and manually type the results into the LaTeX table below
+```{r}
+df <- tribble(
+  ~`Confidence Distribution`, ~`Range Tested`, ~`Max Absolute Error (Relative Error)`,
+  "Logit-Normal($\\mu$, $\\sigma \\mid \\mu \\gg \\sigma$)", "$-10 \\leq \\mu \\leq 10$, $0.1 \\leq \\sigma \\leq 2.7$", "0.01 (2\\%)",
+  "Beta($\\alpha$, $\\beta$)", "$0.1 \\leq \\alpha, \\beta \\leq 5$", "0.005 (0.9\\%)",
+  "Kumaraswamy($\\alpha$, $\\beta$)", "$0.1 \\leq \\alpha, \\beta \\leq 5$", "0.003 (0.3\\%)",
+  "Logit-Normal($\\mu$, $\\sigma \\mid \\mu \\leq \\sigma$)", "$-5 \\leq \\mu \\leq 5$, $0.2 \\leq \\sigma \\leq 5$", "0.07 (12\\%)",
+  "Uniform(min, max)", "$0.1 \\leq min < max \\leq 0.9$", "0.02 (8\\%)",
+  "Mixture of Betas($p_1$, $\\alpha_1$, $\\beta_1$, $\\alpha_2$, $\\beta_2$)",
+  "$0.2 < p_1 < 0.8$, $0.2 \\leq \\alpha_1, \\beta_1, \\alpha_2, \\beta_2 \\leq 10$", "0.04 (12\\%)"
+)
+
+df
+```
+
+```{r sim_res}
+df |>
+  kbl(booktabs = T, escape = F, caption = "Maximum absolute and relative error between simulated and analytic Bayes-optimal accuracies under non-Gaussian confidence distributions. For unimodal distributions (Logit-Normal with $\\mu \\gg \\sigma$, Beta, and Kumaraswamy), the Gaussian SDT approximation remains highly accurate, with errors below 1\\%.") |>
+  kable_styling(latex_options = c("scale_down", "hold_position")) |>
+  pack_rows("Unimodal", 1, 3) |>
+  pack_rows("Non-unimodal", 4, 6)
+```

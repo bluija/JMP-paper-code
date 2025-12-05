@@ -1,0 +1,72 @@
+---
+title: "Figure 4"
+---
+
+```{r}
+source("derivation.R")
+
+library(tidyverse)
+library(ggplot2)
+library(tune)
+
+theme_set(theme_light(base_size = 16))
+```
+
+# run simulate.py to generate acc.csv
+```{r}
+df <- read_csv("acc.csv")
+df
+```
+
+```{r}
+df <- df |>
+  rowwise() |>
+  mutate(
+    hu_d = auc_to_d(hu_auc),
+    ai_d = auc_to_d(ai_auc),
+    com_acc = combined_accuracy_d(
+      theta_m = ai_acc,
+      theta_h = hu_acc,
+      d_m = ai_d,
+      d_h = hu_d
+    ),
+  )
+
+df
+```
+
+```{r}
+nrow(df |> filter(sim_acc > ai_acc & sim_acc > hu_acc)) / nrow(df)
+```
+
+```{r}
+nrow(df |> filter(com_acc > ai_acc & com_acc > hu_acc)) / nrow(df)
+```
+
+```{r}
+mean(abs(df$sim_acc - df$com_acc))
+```
+
+```{r}
+sqrt(mean((df$sim_acc - df$com_acc)^2))
+```
+
+```{r}
+summary(lm(df$sim_acc ~ df$com_acc))
+```
+
+```{r}
+cor.test(df$sim_acc, df$com_acc)
+```
+
+```{r}
+df |> ggplot(aes(y = sim_acc, x = com_acc)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(lty = 2) +
+  labs(y = "Empirical Combined Accuracy", x = "Analytic Combined Accuracy") +
+  coord_obs_pred()
+```
+
+```{r}
+ggsave("match.pdf", width = 5, height = 5)
+```
