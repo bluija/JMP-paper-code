@@ -1,0 +1,274 @@
+---
+title: "Figure 4 5 E8"
+output: pdf_document
+---
+
+```{r}
+source("derivation.R")
+
+library(tidyverse)
+library(ggplot2)
+library(tune)
+library(lme4)
+library(emmeans)
+
+theme_set(theme_classic(base_size = 16))
+```
+
+# run simulate.py to generate acc.csv
+```{r}
+df <- read_csv("acc.csv")
+df
+```
+
+```{r}
+df |> ggplot(aes(rho_hm, after_stat(density))) +
+  geom_histogram() +
+  labs(x = "Human and AI Correlations", y = "Density")
+```
+
+# Figure E.8
+```{r}
+ggsave("hm_cor.pdf", width = 5, height = 4)
+```
+
+```{r}
+df |> summarize(mean(rho_hm), sd(rho_hm))
+```
+
+```{r}
+quantile(df$rho_hm, probs = c(0.025, 0.975))
+```
+
+```{r}
+df_m <- df |> filter(hu_cnfs == "m")
+df_l <- df |> filter(hu_cnfs == "l")
+df_h <- df |> filter(hu_cnfs == "h")
+```
+
+```{r}
+cor.test(df_m$mcs_acc, df_h$mcs_acc)
+```
+
+```{r}
+cor.test(df_m$mcs_acc, df_l$mcs_acc)
+```
+
+```{r}
+mean(abs(df_m$mcs_acc - df_h$mcs_acc))
+```
+
+```{r}
+sqrt(mean((df_m$mcs_acc - df_h$mcs_acc)^2))
+```
+
+```{r}
+mean(abs(df_m$mcs_acc - df_l$mcs_acc))
+```
+
+```{r}
+sqrt(mean((df_m$mcs_acc - df_l$mcs_acc)^2))
+```
+
+```{r}
+df <- df_m
+```
+
+# SDT combined accuracy
+```{r echo=FALSE}
+df <- df |>
+  rowwise() |>
+  mutate(
+    hu_d = auc_to_d(hu_auc),
+    ai_d = auc_to_d(ai_auc),
+    sdt_acc = combined_accuracy_d(
+      theta_m = ai_acc,
+      theta_h = hu_acc,
+      d_m = ai_d,
+      d_h = hu_d,
+      cov_hm = cov_hm
+    ),
+    sdt_acc_no_cor = combined_accuracy_d(
+      theta_m = ai_acc,
+      theta_h = hu_acc,
+      d_m = ai_d,
+      d_h = hu_d,
+      cov_hm = 0
+    ),
+  )
+
+df
+```
+
+```{r}
+df_10 <- df |> filter(ai_bins == 10)
+df_5 <- df |> filter(ai_bins == 5)
+df_3 <- df |> filter(ai_bins == 3)
+```
+
+```{r}
+cor.test(df_10$bayes_acc, df_5$bayes_acc)
+```
+
+```{r}
+cor.test(df_10$bayes_acc, df_3$bayes_acc)
+```
+
+```{r}
+mean(abs(df_10$bayes_acc - df_5$bayes_acc))
+```
+
+```{r}
+sqrt(mean((df_10$bayes_acc - df_5$bayes_acc)^2))
+```
+
+```{r}
+mean(abs(df_10$bayes_acc - df_3$bayes_acc))
+```
+
+```{r}
+sqrt(mean((df_10$bayes_acc - df_3$bayes_acc)^2))
+```
+
+```{r}
+df <- df_10
+df
+```
+
+
+# complementarity
+```{r}
+nrow(df |> filter(bayes_acc > ai_acc & bayes_acc > hu_acc)) / nrow(df)
+```
+
+```{r}
+nrow(df |> filter(sdt_acc > ai_acc & sdt_acc > hu_acc)) / nrow(df)
+```
+
+```{r}
+nrow(df |> filter(sdt_acc_no_cor > ai_acc & sdt_acc_no_cor > hu_acc)) / nrow(df)
+```
+
+```{r}
+nrow(df |> filter(mcs_acc > ai_acc & mcs_acc > hu_acc)) / nrow(df)
+```
+
+```{r}
+nrow(df |> filter(rand_acc > ai_acc & rand_acc > hu_acc)) / nrow(df)
+```
+
+# error rate
+```{r}
+mean(abs(df$bayes_acc - df$sdt_acc))
+```
+
+```{r}
+mean(abs(df$bayes_acc - df$sdt_acc_no_cor))
+```
+
+```{r}
+sqrt(mean((df$bayes_acc - df$sdt_acc)^2))
+```
+
+```{r}
+sqrt(mean((df$bayes_acc - df$sdt_acc_no_cor)^2))
+```
+
+```{r}
+summary(lm(df$bayes_acc ~ df$sdt_acc))
+```
+
+```{r}
+summary(lm(df$bayes_acc ~ df$sdt_acc_no_cor))
+```
+
+```{r}
+cor.test(df$bayes_acc, df$sdt_acc)
+```
+
+```{r}
+cor.test(df$bayes_acc, df$sdt_acc_no_cor)
+```
+
+```{r}
+mean((df$bayes_acc - df$sdt_acc))
+```
+
+```{r}
+sd((df$bayes_acc - df$sdt_acc))
+```
+
+```{r}
+quantile(df$bayes_acc - df$sdt_acc, probs = c(0.025, 0.975))
+```
+
+```{r}
+mean((df$bayes_acc - df$sdt_acc_no_cor) / df$bayes_acc)
+```
+
+```{r}
+df |> ggplot(aes(y = bayes_acc, x = sdt_acc)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(lty = 2) +
+  labs(y = "Empirical Combined Accuracy", x = "Analytic Combined Accuracy") +
+  coord_obs_pred()
+```
+
+# Figure 4
+```{r}
+ggsave("match.pdf", width = 5, height = 5)
+```
+
+```{r}
+df |> ggplot(aes(y = bayes_acc, x = sdt_acc_no_cor)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(lty = 2) +
+  labs(y = "Empirical Combined Accuracy", x = "Analytic Combined Accuracy (No Correlation)") +
+  coord_obs_pred()
+```
+
+```{r}
+df |> ggplot(aes(y = sdt_acc, x = sdt_acc_no_cor)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(lty = 2) +
+  labs(y = "Analytic Combined Accuracy", x = "Analytic Combined Accuracy (No Correlation)") +
+  coord_obs_pred()
+```
+
+# Figure 5
+```{r}
+df |>
+  select(contains("acc"), -contains("sdt_acc")) |>
+  pivot_longer(everything(), names_to = "method", values_to = "acc") |>
+  mutate(
+    method = factor(method,
+      levels = c("bayes_acc", "mcs_acc", "rand_acc", "hu_acc", "ai_acc"),
+      labels = c("Bayes", "MCS", "Random", "Human", "AI")
+    )
+  ) |>
+  ggplot(aes(x = method, y = acc)) +
+  stat_summary(fun = mean, geom = "bar", fill = "white", color = "black") +
+  stat_summary(fun.data = mean_cl_boot, geom = "errorbar", width = 0.2) +
+  labs(x = "Decision Rule", y = "Accuracy") +
+  scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0, 0.05)))
+
+ggsave("com_acc.pdf", width = 6, height = 4)
+```
+
+```{r}
+df_mod <- df |>
+  select(participant_id, model, contains("acc"), -contains("sdt_acc")) |>
+  pivot_longer(contains("acc"), names_to = "method", values_to = "acc")
+
+df_mod
+```
+
+```{r}
+mod <- lmer(acc ~ method + (1 | participant_id) + (1 | model), data = df_mod)
+summary(mod)
+```
+
+```{r}
+ph <- emmeans(mod, trt.vs.ctrl ~ method, ref = "bayes_acc")
+summary(ph)
+```
